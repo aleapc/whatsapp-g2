@@ -1,0 +1,24 @@
+{
+  "package_id": "com.dalff.whatsapp",
+  "edition": "202601",
+  "name": "WhatsApp Bridge",
+  "version": "0.1.0",
+  "min_app_version": "0.1.0",
+  "min_sdk_version": "0.0.9",
+  "tagline": "WhatsApp messages on your glasses",
+  "description": "Receive WhatsApp messages from your Win11 PC and reply by voice, directly on your G2 glasses. Requires the WhatsApp G2 Bridge backend running on your network.",
+  "author": "Dalff",
+  "entrypoint": "index.html",
+  "supported_languages": ["en", "es"],
+  "permissions": [
+    {
+      "name": "network",
+      "desc": "Connect to the WhatsApp bridge backend",
+      "whitelist": ["*"]
+    },
+    {
+      "name": "g2-microphone",
+      "desc": "Capture voice for reply transcription"
+    }
+  ]
+}

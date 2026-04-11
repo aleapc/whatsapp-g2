@@ -1,0 +1,24 @@
+{
+  "name": "whatsapp-g2",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host --port 5176",
+    "build": "tsc && vite build",
+    "pack": "npm run build && node -e \"const v=require('./package.json').version; require('child_process').execSync('npx @evenrealities/evenhub-cli pack app.json dist/ -o whatsapp-v'+v+'.ehpk', {stdio:'inherit'})\""
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "^0.0.10",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "^0.1.11",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.8"
+  }
+}
