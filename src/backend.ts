@@ -18,6 +18,7 @@ export class BackendClient {
   private callbacks: BackendCallbacks = {}
   private state: AppState
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private stopped: boolean = false
 
   constructor(baseUrl: string, state: AppState) {
     this.baseUrl = baseUrl
@@ -29,7 +30,9 @@ export class BackendClient {
   }
 
   connect(): void {
-    this.disconnect()
+    // Tear down any existing connection/timer without flipping the stopped flag.
+    this.teardown()
+    this.stopped = false
     try {
       this.eventSource = new EventSource(`${this.baseUrl}/stream`)
 
@@ -76,14 +79,16 @@ export class BackendClient {
   }
 
   private scheduleReconnect(): void {
+    if (this.stopped) return
     if (this.reconnectTimer) return
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
+      if (this.stopped) return
       if (!this.state.connected) this.connect()
     }, 5000)
   }
 
-  disconnect(): void {
+  private teardown(): void {
     if (this.eventSource) {
       this.eventSource.close()
       this.eventSource = null
@@ -95,24 +100,38 @@ export class BackendClient {
     this.state.connected = false
   }
 
+  disconnect(): void {
+    this.stopped = true
+    this.teardown()
+  }
+
   updateBackendUrl(url: string): void {
     this.baseUrl = url
     this.state.backendUrl = url
-    if (this.eventSource) {
-      this.connect()  // reconnect with new URL
-    }
+    // Always (re)connect after a URL change — previously this only fired when
+    // eventSource was truthy, silently swallowing updates made while offline.
+    this.connect()
   }
 
   /**
    * Send audio samples for transcription and reply.
    * Returns the transcribed text on success, or null on failure.
+   *
+   * PCM is sent as raw little-endian 16-bit samples (application/octet-stream),
+   * which is dramatically smaller on the wire than a JSON array of numbers.
+   * The recipient rides along as an `x-recipient` header so the body stays
+   * pure binary.
    */
   async sendReply(recipient: string, pcm: number[]): Promise<string | null> {
     try {
+      const samples = Int16Array.from(pcm)
       const response = await fetch(`${this.baseUrl}/reply`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipient, pcm }),
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'x-recipient': recipient,
+        },
+        body: samples.buffer,
       })
       if (!response.ok) {
         console.warn(`[backend] /reply ${response.status}`)

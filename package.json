@@ -14,7 +14,8 @@
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
-    "@evenrealities/evenhub-cli": "^0.1.11",
+    "@evenrealities/evenhub-cli": "^0.1.13",
+    "@evenrealities/evenhub-simulator": "^0.7.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
