@@ -1,6 +1,6 @@
 // WhatsApp G2 — React phone UI (settings + backend URL + connection status)
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import type { EvenAppBridge } from '@evenrealities/even_hub_sdk'
 import type { AppState } from './state'
 import type { BackendClient } from './backend'
@@ -12,15 +12,8 @@ interface AppProps {
 }
 
 export function App({ bridge, state, backend }: AppProps) {
-  const [, setTick] = useState(0)
-  const rerender = useCallback(() => setTick((n) => n + 1), [])
   const [url, setUrl] = useState(state.backendUrl)
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
-
-  useEffect(() => {
-    const interval = setInterval(rerender, 1000)
-    return () => clearInterval(interval)
-  }, [rerender])
 
   const handleSaveUrl = useCallback(async () => {
     state.backendUrl = url

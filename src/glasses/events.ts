@@ -17,6 +17,18 @@ const EVT_FOREGROUND_EXIT = 5
 
 const SCROLL_COOLDOWN_MS = 300
 
+// Handle to the 3s auto-return timer started when entering the 'reviewing'
+// screen. Captured so we can cancel it on screen transitions / lifecycle exit
+// and avoid firing a stale render against a different screen.
+let reviewTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+function clearReviewTimeout(): void {
+  if (reviewTimeoutId !== null) {
+    clearTimeout(reviewTimeoutId)
+    reviewTimeoutId = null
+  }
+}
+
 interface ParsedEvent {
   action: 'click' | 'doubleClick' | 'scrollUp' | 'scrollDown' | 'foregroundEnter' | 'foregroundExit' | 'unknown'
 }
@@ -93,6 +105,9 @@ export function setupEventHandler(deps: EventHandlerDeps): void {
       if (state.recording) {
         stopRecording(bridge, state)
       }
+      // Cancel any pending auto-return timer so it doesn't fire while we're
+      // backgrounded and race with FOREGROUND_ENTER.
+      clearReviewTimeout()
       backend.disconnect()
       return
     }
@@ -167,9 +182,9 @@ function handleTap(bridge: EvenAppBridge, state: AppState, backend: BackendClien
 function handleDoubleTap(bridge: EvenAppBridge, state: AppState, backend: BackendClient): void {
   switch (state.screen) {
     case 'idle':
-      // Graceful shutdown
+      // Graceful shutdown (root screen: exit the app)
       try {
-        bridge.shutDownPageContainer(0)
+        bridge.shutDownPageContainer(1)
       } catch { /* ignore */ }
       break
 
@@ -194,6 +209,7 @@ function handleDoubleTap(bridge: EvenAppBridge, state: AppState, backend: Backen
 
     case 'reviewing':
       // Cancel reply
+      clearReviewTimeout()
       state.replyText = ''
       state.audioBuffer = []
       state.screen = 'detail'
@@ -235,7 +251,9 @@ async function handleStopRecording(bridge: EvenAppBridge, state: AppState, backe
     renderScreen(bridge, state)
 
     // Auto-return to list after 3s
-    setTimeout(() => {
+    clearReviewTimeout()
+    reviewTimeoutId = setTimeout(() => {
+      reviewTimeoutId = null
       if (state.screen === 'reviewing') {
         state.replyText = ''
         state.selectedMessage = null
@@ -252,6 +270,7 @@ async function handleStopRecording(bridge: EvenAppBridge, state: AppState, backe
 async function handleSendReply(bridge: EvenAppBridge, state: AppState, _backend: BackendClient): Promise<void> {
   // Reply was already sent by the /reply endpoint during transcription.
   // This tap just confirms and returns to list.
+  clearReviewTimeout()
   state.replyText = ''
   state.selectedMessage = null
   state.screen = 'list'
